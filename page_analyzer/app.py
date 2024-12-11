@@ -10,4 +10,4 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
 @app.route("/")
 def main():
-    return render_template("main.html")
+    return render_template("cover/index.html")
