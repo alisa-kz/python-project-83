@@ -1,11 +1,7 @@
 import psycopg2
-import os
-import validators
 
-from dotenv import load_dotenv
-from flask import Flask, render_template, request, flash, redirect, url_for, get_flashed_messages
-from datetime import datetime
-from urllib.parse import urlparse
+
+from flask import flash
 from psycopg2.extras import DictCursor
 
 
@@ -17,7 +13,7 @@ class UrlsRepository:
         return psycopg2.connect(self.db_url)
 
     def get_content(self):
-        sql = "SELECT * FROM urls ORDER BY id DESC"
+        sql = "SELECT urls.id, urls.name, MAX(url_checks.created_at) AS last_check_date FROM urls LEFT JOIN url_checks ON urls.id = url_checks.url_id GROUP BY urls.id ORDER BY urls.id DESC"
         with self.get_connection() as conn:
             with conn.cursor(cursor_factory=DictCursor) as curs:
                 curs.execute(sql)
@@ -51,6 +47,27 @@ class UrlsRepository:
                 url_id = curs.fetchone()[0]
             conn.commit()
         return url_id
+
+    def check_save(self, url_id, check_date):
+        sql = "INSERT INTO url_checks (url_id, created_at) VALUES (%s, %s)"
+        sql_id = "SELECT id FROM url_checks WHERE url_id=%s"
+        with self.get_connection() as conn:
+            with conn.cursor() as curs:
+                curs.execute(sql, (url_id, check_date))
+                curs.execute(sql_id, (url_id, ))
+                check_id = curs.fetchone()[0]
+                flash("Страница успешно проверена", "alert alert-success")
+            conn.commit()
+        return check_id
+
+    def checks_get(self, url_id):
+        sql = "SELECT * FROM url_checks WHERE url_id=%s ORDER BY id DESC"
+        with self.get_connection() as conn:
+            with conn.cursor(cursor_factory=DictCursor) as curs:
+                curs.execute(sql, (url_id, ))
+                checks = curs.fetchall()
+            conn.commit()
+            return checks
 
     # def destroy(self, id):
     #     with self.get_connection() as conn:

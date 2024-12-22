@@ -81,10 +81,12 @@ def show_url(id):
     #         url = curs.fetchone()
     #     conn.commit()
     url = repo.find(id)
+    checks = repo.checks_get(id)
     messages = get_flashed_messages(with_categories=True)
     return render_template(
         "show.html",
         url=url,
+        checks=checks,
         messages=messages
     )
 
@@ -103,4 +105,19 @@ def show_all_urls():
         "urls.html",
         urls=urls,
         messages=messages
+    )
+
+
+@app.post("/urls/<id>/checks")
+def check_url(id):
+    check_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    repo.check_save(id, check_date)
+    checks = repo.checks_get(id)
+    url = repo.find(id)
+    ch_messages = get_flashed_messages(with_categories=True)
+    return render_template(
+        "show.html",
+        url=url,
+        checks=checks,
+        ch_messages=ch_messages
     )
