@@ -13,7 +13,7 @@ class UrlsRepository:
         return psycopg2.connect(self.db_url)
 
     def get_content(self):
-        sql = "SELECT urls.id, urls.name, MAX(url_checks.created_at) AS last_check_date FROM urls LEFT JOIN url_checks ON urls.id = url_checks.url_id GROUP BY urls.id ORDER BY urls.id DESC"
+        sql = "SELECT urls.id, urls.name, MAX(url_checks.created_at) AS last_check_date, url_checks.status_code FROM urls LEFT JOIN url_checks ON urls.id = url_checks.url_id GROUP BY urls.id, url_checks.status_code ORDER BY urls.id DESC"
         with self.get_connection() as conn:
             with conn.cursor(cursor_factory=DictCursor) as curs:
                 curs.execute(sql)
@@ -48,12 +48,12 @@ class UrlsRepository:
             conn.commit()
         return url_id
 
-    def check_save(self, url_id, check_date):
-        sql = "INSERT INTO url_checks (url_id, created_at) VALUES (%s, %s)"
+    def check_save(self, url_id, check_date, status_code):
+        sql = "INSERT INTO url_checks (url_id, created_at, status_code) VALUES (%s, %s, %s)"
         sql_id = "SELECT id FROM url_checks WHERE url_id=%s"
         with self.get_connection() as conn:
             with conn.cursor() as curs:
-                curs.execute(sql, (url_id, check_date))
+                curs.execute(sql, (url_id, check_date, status_code))
                 curs.execute(sql_id, (url_id, ))
                 check_id = curs.fetchone()[0]
                 flash("Страница успешно проверена", "alert alert-success")

@@ -1,6 +1,7 @@
 import psycopg2
 import os
 import validators
+import requests
 
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, flash, redirect, url_for, get_flashed_messages
@@ -110,10 +111,25 @@ def show_all_urls():
 
 @app.post("/urls/<id>/checks")
 def check_url(id):
-    check_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    repo.check_save(id, check_date)
-    checks = repo.checks_get(id)
     url = repo.find(id)
+    url_name = url[1]
+    try:
+        response = requests.get(url_name)
+        response.raise_for_status()
+        status_code = response.status_code
+    except requests.exceptions.RequestException:
+        flash('Произошла ошибка при проверке', 'alert alert-danger')
+        ch_messages = get_flashed_messages(with_categories=True)
+        checks = repo.checks_get(id)
+        return render_template(
+            "show.html",
+            url=url,
+            checks=checks,
+            ch_messages=ch_messages
+        )
+    check_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    repo.check_save(id, check_date, status_code)
+    checks = repo.checks_get(id)
     ch_messages = get_flashed_messages(with_categories=True)
     return render_template(
         "show.html",
