@@ -1,22 +1,26 @@
-import psycopg2
 import os
-import validators
-import requests
-
-from dotenv import load_dotenv
-from flask import Flask, render_template, request, flash, redirect, url_for, get_flashed_messages
 from datetime import datetime
 from urllib.parse import urlparse
-from psycopg2.extras import DictCursor
-from page_analyzer.urls_repo import UrlsRepository
 
+import requests
+import validators
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from flask import (
+    Flask,
+    flash,
+    get_flashed_messages,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from page_analyzer.urls_repo import UrlsRepository
 
 load_dotenv()
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
-# conn = psycopg2.connect(DATABASE_URL)
-
 repo = UrlsRepository(DATABASE_URL)
 
 
@@ -55,32 +59,11 @@ def get_url():
     url = url_norm.scheme + "://" + url_norm.hostname
     now_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     url_id = repo.save(url, now_date)
-    # sql = "INSERT INTO urls (name, created_at) VALUES (%s, %s)"
-    # sql_select = "SELECT * FROM urls WHERE name=%s"
-    # sql_id = "SELECT id FROM urls WHERE name=%s"
-    # with conn:
-    #     with conn.cursor() as curs:
-    #         curs.execute(sql_select, (url, ))
-    #         url_ex = curs.fetchone()
-    #         if url_ex:
-    #             flash("Страница уже существует", "alert alert-info")
-    #         else:
-    #             curs.execute(sql, (url, now_date))
-    #             flash("Страница успешно добавлена", "alert alert-success")
-    #         curs.execute(sql_id, (url, ))
-    #         url_id = curs.fetchone()[0]
-    #     conn.commit()
     return redirect(url_for("show_url", id=url_id), code=302)
 
 
 @app.route("/urls/<id>")
 def show_url(id):
-    # sql = "SELECT * FROM urls WHERE id=%s"
-    # with conn:
-    #     with conn.cursor(cursor_factory=DictCursor) as curs:
-    #         curs.execute(sql, (id,))
-    #         url = curs.fetchone()
-    #     conn.commit()
     url = repo.find(id)
     checks = repo.checks_get(id)
     messages = get_flashed_messages(with_categories=True)
@@ -94,12 +77,6 @@ def show_url(id):
 
 @app.route("/urls")
 def show_all_urls():
-    # sql = "SELECT * FROM urls ORDER BY id DESC"
-    # with conn:
-    #     with conn.cursor(cursor_factory=DictCursor) as curs:
-    #         curs.execute(sql)
-    #         urls = curs.fetchall()
-    #     conn.commit()
     urls = repo.get_content()
     messages = get_flashed_messages(with_categories=True)
     return render_template(
@@ -116,7 +93,17 @@ def check_url(id):
     try:
         response = requests.get(url_name)
         response.raise_for_status()
-        status_code = response.status_code
+        code = response.status_code
+        bs = BeautifulSoup(response.text, 'html.parser')
+        h1 = bs.h1.string
+        title = bs.title.string
+        metas = bs.find_all('meta')
+        for meta in metas:
+            if meta.get('name') == 'description':
+                content = meta['content']
+                break
+            else:
+                content = None
     except requests.exceptions.RequestException:
         flash('Произошла ошибка при проверке', 'alert alert-danger')
         ch_messages = get_flashed_messages(with_categories=True)
@@ -127,8 +114,8 @@ def check_url(id):
             checks=checks,
             ch_messages=ch_messages
         )
-    check_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    repo.check_save(id, check_date, status_code)
+    ch_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    repo.check_save(id, ch_date, code, h1, title, content)
     checks = repo.checks_get(id)
     ch_messages = get_flashed_messages(with_categories=True)
     return render_template(
