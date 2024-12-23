@@ -50,16 +50,18 @@ class UrlsRepository:
             conn.commit()
         return url_id
 
-    def check_save(self, url_id, ch_date, code, h1, title, content):
+    def check_save(self, check_data):
         sql = """INSERT INTO url_checks (
         url_id, created_at, status_code, h1, title, description
         )
-        VALUES (%s, %s, %s, %s, %s, %s)"""
+        VALUES (
+        %(url_id)s, %(ch_date)s, %(code)s, %(h1)s, %(title)s, %(content)s
+        )"""
         sql_id = "SELECT id FROM url_checks WHERE url_id=%s"
         with self.get_connection() as conn:
             with conn.cursor() as curs:
-                curs.execute(sql, (url_id, ch_date, code, h1, title, content))
-                curs.execute(sql_id, (url_id, ))
+                curs.execute(sql, check_data)
+                curs.execute(sql_id, (check_data['url_id'], ))
                 check_id = curs.fetchone()[0]
                 flash("Страница успешно проверена", "alert alert-success")
             conn.commit()

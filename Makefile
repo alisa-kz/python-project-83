@@ -7,7 +7,7 @@ dev:
 	poetry run flask --app page_analyzer:app run
 
 lint:
-	poetry run ruff check .
+	poetry run ruff check page_analyzer
 
 PORT ?= 8000
 start:

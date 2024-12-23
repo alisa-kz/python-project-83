@@ -91,22 +91,28 @@ def show_all_urls():
 
 @app.post("/urls/<id>/checks")
 def check_url(id):
+    check_data = {}
+    check_data['url_id'] = id
     url = repo.find(id)
     url_name = url[1]
     try:
         response = requests.get(url_name)
         response.raise_for_status()
         code = response.status_code
+        check_data['code'] = code
         bs = BeautifulSoup(response.text, 'html.parser')
         h1 = bs.h1.string
+        check_data['h1'] = h1
         title = bs.title.string
+        check_data['title'] = title
         metas = bs.find_all('meta')
         for meta in metas:
             if meta.get('name') == 'description':
                 content = meta['content']
+                check_data['content'] = content
                 break
             else:
-                content = None
+                check_data['content'] = None
     except requests.exceptions.RequestException:
         flash('Произошла ошибка при проверке', 'alert alert-danger')
         ch_messages = get_flashed_messages(with_categories=True)
@@ -118,7 +124,8 @@ def check_url(id):
             ch_messages=ch_messages
         )
     ch_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    repo.check_save(id, ch_date, code, h1, title, content)
+    check_data['ch_date'] = ch_date
+    repo.check_save(check_data)
     checks = repo.checks_get(id)
     ch_messages = get_flashed_messages(with_categories=True)
     return render_template(
