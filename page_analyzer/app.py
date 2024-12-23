@@ -92,7 +92,7 @@ def show_all_urls():
 @app.post("/urls/<id>/checks")
 def check_url(id):
     check_data = {}
-    check_data['url_id'] = id
+    check_data['id'] = id
     url = repo.find(id)
     url_name = url[1]
     try:

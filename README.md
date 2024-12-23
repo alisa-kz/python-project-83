@@ -1,4 +1,4 @@
-[Page Analyzer](https://python-project-83-rkj1.onrender.com)
+[Page Analyzer](https://python-project-83-rkj1.onrender.com) - this is a website that analyzes specified pages for SEO suitability
 
 ### Hexlet tests and linter status:
 [![Actions Status](https://github.com/alisa-kz/python-project-83/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/alisa-kz/python-project-83/actions)
