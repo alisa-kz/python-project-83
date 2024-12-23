@@ -15,6 +15,7 @@ from flask import (
     request,
     url_for,
 )
+
 from page_analyzer.urls_repo import UrlsRepository
 
 load_dotenv()
