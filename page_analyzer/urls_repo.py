@@ -1,5 +1,4 @@
 import psycopg2
-from flask import flash
 from psycopg2.extras import DictCursor
 
 
