@@ -48,20 +48,22 @@ def get_url():
     errors = validate(url_full)
     if errors:
         flash("Некорректный URL", "alert alert-danger")
-        messages = get_flashed_messages(with_categories=True)
         return (
             render_template(
                 "index.html",
                 url=url_full,
-                errors=errors,
-                messages=messages
+                errors=errors
             ),
             422,
         )
     url_norm = urlparse(url_full)
     url = url_norm.scheme + "://" + url_norm.hostname
     now_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    url_id = repo.save(url, now_date)
+    url_id, unique = repo.save(url, now_date)
+    if unique:
+        flash("Страница успешно добавлена", "alert alert-success")
+    else:
+        flash("Страница уже существует", "alert alert-info")
     return redirect(url_for("show_url", id=url_id), code=302)
 
 
@@ -69,23 +71,19 @@ def get_url():
 def show_url(id):
     url = repo.find(id)
     checks = repo.checks_get(id)
-    messages = get_flashed_messages(with_categories=True)
     return render_template(
         "show.html",
         url=url,
-        checks=checks,
-        messages=messages
+        checks=checks
     )
 
 
 @app.route("/urls")
 def show_all_urls():
     urls = repo.get_content()
-    messages = get_flashed_messages(with_categories=True)
     return render_template(
         "urls.html",
-        urls=urls,
-        messages=messages
+        urls=urls
     )
 
 
@@ -115,22 +113,20 @@ def check_url(id):
                 check_data['content'] = None
     except requests.exceptions.RequestException:
         flash('Произошла ошибка при проверке', 'alert alert-danger')
-        ch_messages = get_flashed_messages(with_categories=True)
         checks = repo.checks_get(id)
         return render_template(
             "show.html",
             url=url,
-            checks=checks,
-            ch_messages=ch_messages
+            checks=checks
         )
     ch_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     check_data['ch_date'] = ch_date
-    repo.check_save(check_data)
+    check_id = repo.check_save(check_data)
+    if check_id:
+        flash("Страница успешно проверена", "alert alert-success")
     checks = repo.checks_get(id)
-    ch_messages = get_flashed_messages(with_categories=True)
     return render_template(
         "show.html",
         url=url,
-        checks=checks,
-        ch_messages=ch_messages
+        checks=checks
     )

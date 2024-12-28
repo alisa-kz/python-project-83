@@ -40,15 +40,14 @@ class UrlsRepository:
             with conn.cursor() as curs:
                 curs.execute(sql_select, (url, ))
                 url_ex = curs.fetchone()
-                if url_ex:
-                    flash("Страница уже существует", "alert alert-info")
-                else:
+                unique = False
+                if not url_ex:
                     curs.execute(sql, (url, now_date))
-                    flash("Страница успешно добавлена", "alert alert-success")
+                    unique = True
                 curs.execute(sql_id, (url, ))
                 url_id = curs.fetchone()[0]
             conn.commit()
-        return url_id
+        return url_id, unique
 
     def check_save(self, check_data):
         sql = """INSERT INTO url_checks (
@@ -63,7 +62,6 @@ class UrlsRepository:
                 curs.execute(sql, check_data)
                 curs.execute(sql_id, (check_data['url_id'], ))
                 check_id = curs.fetchone()[0]
-                flash("Страница успешно проверена", "alert alert-success")
             conn.commit()
         return check_id
 
