@@ -1,10 +1,7 @@
 import os
 from datetime import datetime
-from urllib.parse import urlparse
 
 import requests
-import validators
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from flask import (
     Flask,
@@ -15,7 +12,10 @@ from flask import (
     url_for,
 )
 
+from page_analyzer.data_builder import data_build
+from page_analyzer.normalizer import normalize
 from page_analyzer.urls_repo import UrlsRepository
+from page_analyzer.validator import validate
 
 load_dotenv()
 
@@ -29,15 +29,6 @@ repo = UrlsRepository(DATABASE_URL)
 @app.route("/")
 def main():
     return render_template("index.html")
-
-
-def validate(url):
-    errors = {}
-    if len(url) > 255:
-        errors["big_len"] = "Адрес сайта не должен превышать 255 символов"
-    if not validators.url(url):
-        errors["not_valid"] = "Неправильный адрес"
-    return errors
 
 
 @app.post("/urls")
@@ -55,8 +46,7 @@ def get_url():
             ),
             422,
         )
-    url_norm = urlparse(url_full)
-    url = url_norm.scheme + "://" + url_norm.hostname
+    url = normalize(url_full)
     now_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     url_id, unique = repo.save(url, now_date)
     if unique:
@@ -88,28 +78,12 @@ def show_all_urls():
 
 @app.post("/urls/<id>/checks")
 def check_url(id):
-    check_data = {}
-    check_data['url_id'] = id
     url = repo.find(id)
     url_name = url[1]
     try:
         response = requests.get(url_name)
         response.raise_for_status()
-        code = response.status_code
-        check_data['code'] = code
-        bs = BeautifulSoup(response.text, 'html.parser')
-        h1 = bs.h1.string
-        check_data['h1'] = h1
-        title = bs.title.string
-        check_data['title'] = title
-        metas = bs.find_all('meta')
-        for meta in metas:
-            if meta.get('name') == 'description':
-                content = meta['content']
-                check_data['content'] = content
-                break
-            else:
-                check_data['content'] = None
+        check_data = data_build(response, id)
     except requests.exceptions.RequestException:
         flash('Произошла ошибка при проверке', 'alert alert-danger')
         checks = repo.checks_get(id)
@@ -118,8 +92,6 @@ def check_url(id):
             url=url,
             checks=checks
         )
-    ch_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    check_data['ch_date'] = ch_date
     check_id = repo.check_save(check_data)
     if check_id:
         flash("Страница успешно проверена", "alert alert-success")
