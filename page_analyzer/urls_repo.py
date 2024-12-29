@@ -2,12 +2,22 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 
-class UrlsRepository:
+class DatabaseConnection:
     def __init__(self, db_url):
         self.db_url = db_url
 
-    def get_connection(self):
-        return psycopg2.connect(self.db_url)
+    def __enter__(self):
+        self.conn = psycopg2.connect(self.db_url)
+        return self.conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.conn:
+            self.conn.close()
+
+
+class UrlsRepository:
+    def __init__(self, db_url):
+        self.db_url = db_url
 
     def get_content(self):
         sql = """SELECT urls.id, urls.name, MAX(url_checks.created_at)
@@ -15,7 +25,7 @@ class UrlsRepository:
         FROM urls LEFT JOIN url_checks
         ON urls.id = url_checks.url_id
         GROUP BY urls.id, url_checks.status_code ORDER BY urls.id DESC"""
-        with self.get_connection() as conn:
+        with DatabaseConnection(self.db_url) as conn:
             with conn.cursor(cursor_factory=DictCursor) as curs:
                 curs.execute(sql)
                 urls = curs.fetchall()
@@ -24,7 +34,7 @@ class UrlsRepository:
 
     def find(self, id):
         sql = "SELECT * FROM urls WHERE id=%s"
-        with self.get_connection() as conn:
+        with DatabaseConnection(self.db_url) as conn:
             with conn.cursor(cursor_factory=DictCursor) as curs:
                 curs.execute(sql, (id,))
                 url = curs.fetchone()
@@ -35,7 +45,7 @@ class UrlsRepository:
         sql = "INSERT INTO urls (name, created_at) VALUES (%s, %s)"
         sql_select = "SELECT * FROM urls WHERE name=%s"
         sql_id = "SELECT id FROM urls WHERE name=%s"
-        with self.get_connection() as conn:
+        with DatabaseConnection(self.db_url) as conn:
             with conn.cursor() as curs:
                 curs.execute(sql_select, (url, ))
                 url_ex = curs.fetchone()
@@ -56,7 +66,7 @@ class UrlsRepository:
         %(url_id)s, %(ch_date)s, %(code)s, %(h1)s, %(title)s, %(content)s
         )"""
         sql_id = "SELECT id FROM url_checks WHERE url_id=%s"
-        with self.get_connection() as conn:
+        with DatabaseConnection(self.db_url) as conn:
             with conn.cursor() as curs:
                 curs.execute(sql, check_data)
                 curs.execute(sql_id, (check_data['url_id'], ))
@@ -66,7 +76,7 @@ class UrlsRepository:
 
     def checks_get(self, url_id):
         sql = "SELECT * FROM url_checks WHERE url_id=%s ORDER BY id DESC"
-        with self.get_connection() as conn:
+        with DatabaseConnection(self.db_url) as conn:
             with conn.cursor(cursor_factory=DictCursor) as curs:
                 curs.execute(sql, (url_id, ))
                 checks = curs.fetchall()
