@@ -9,6 +9,9 @@ dev:
 lint:
 	poetry run ruff check page_analyzer
 
+fix:
+	poetry run ruff check --fix
+
 PORT ?= 8000
 start:
 	poetry run gunicorn -w 5 -b 0.0.0.0:$(PORT) page_analyzer:app

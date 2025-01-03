@@ -13,9 +13,8 @@ from flask import (
 )
 
 from page_analyzer.data_builder import data_build
-from page_analyzer.normalizer import normalize
+from page_analyzer.urls import normalize, validate
 from page_analyzer.urls_repo import UrlsRepository
-from page_analyzer.validator import validate
 
 load_dotenv()
 
@@ -83,7 +82,6 @@ def check_url(id):
     try:
         response = requests.get(url_name)
         response.raise_for_status()
-        check_data = data_build(response, id)
     except requests.exceptions.RequestException:
         flash('Произошла ошибка при проверке', 'alert alert-danger')
         checks = repo.checks_get(id)
@@ -92,6 +90,7 @@ def check_url(id):
             url=url,
             checks=checks
         )
+    check_data = data_build(response, id)
     check_id = repo.check_save(check_data)
     if check_id:
         flash("Страница успешно проверена", "alert alert-success")
