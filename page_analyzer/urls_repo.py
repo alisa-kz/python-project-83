@@ -46,8 +46,8 @@ class UrlsRepository:
         sql = "SELECT id FROM urls WHERE name=%s"
         with self.db as db:
             db.curs.execute(sql, (url, ))
-            id_exist = db.curs.fetchone()
-        return id_exist
+            if db.curs.fetchone():
+                return db.curs.fetchone()[0]
 
     def save(self, url, now_date):
         sql = """INSERT INTO urls (name, created_at)
