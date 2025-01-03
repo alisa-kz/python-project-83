@@ -47,11 +47,12 @@ def get_url():
         )
     url = normalize(url_full)
     now_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    url_id, unique = repo.save(url, now_date)
-    if unique:
-        flash("Страница успешно добавлена", "alert alert-success")
-    else:
+    url_id = repo.confirm_exist(url)
+    if url_id:
         flash("Страница уже существует", "alert alert-info")
+    else:
+        url_id = repo.save(url, now_date)
+        flash("Страница успешно добавлена", "alert alert-success")
     return redirect(url_for("show_url", id=url_id), code=302)
 
 

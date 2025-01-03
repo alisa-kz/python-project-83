@@ -13,6 +13,6 @@ def validate(url):
 
 
 def normalize(url_full):
-    url_norm = urlparse(url_full)
-    url = url_norm.scheme + "://" + url_norm.hostname
+    normalized_url = urlparse(url_full)
+    url = normalized_url.scheme + "://" + normalized_url.hostname
     return url
